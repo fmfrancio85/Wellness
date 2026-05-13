@@ -219,6 +219,30 @@
 
   td.metric-td { text-align: center; }
 
+  /* TICK COLUMN */
+  th.tick-col { width: 40px; text-align: center; }
+  td.tick-td { text-align: center; vertical-align: middle; }
+
+  .tick-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tick-btn.ticked {
+    background: #E8F5E9;
+    border-color: #2E7D32;
+  }
+
   /* NUMBER INPUT */
   .score-input {
     width: 52px;
@@ -410,6 +434,7 @@
     <thead>
       <tr>
         <th>Player</th>
+        <th class="tick-col"></th>
         <th class="metric-col">Fatigue</th>
         <th class="metric-col">Soreness</th>
         <th class="metric-col">Sleep</th>
@@ -485,7 +510,7 @@ function updateDate(val) {
 
 function initData() {
   PLAYERS.forEach(p => {
-    if (!data[p]) data[p] = { fatigue: '', soreness: '', sleep: '', comment: '' };
+    if (!data[p]) data[p] = { tick: false, fatigue: '', soreness: '', sleep: '', comment: '' };
   });
 }
 
@@ -497,20 +522,19 @@ function buildTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${player}</td>
+      <td class="tick-td"><button class="tick-btn ${d.tick ? 'ticked' : ''}" data-player="${player}" data-field="tick">${d.tick ? '✓' : ''}</button></td>
       <td class="metric-td"><input class="score-input" type="number" min="1" max="7" value="${d.fatigue}" placeholder="—" data-player="${player}" data-field="fatigue" inputmode="numeric"></td>
       <td class="metric-td"><input class="score-input" type="number" min="1" max="7" value="${d.soreness}" placeholder="—" data-player="${player}" data-field="soreness" inputmode="numeric"></td>
       <td class="metric-td"><input class="score-input" type="number" min="1" max="7" value="${d.sleep}" placeholder="—" data-player="${player}" data-field="sleep" inputmode="numeric"></td>
       <td><textarea class="comment-input" data-player="${player}" data-field="comment" placeholder="Note...">${d.comment}</textarea></td>
     `;
     tbody.appendChild(tr);
-    // apply color if has value
     ['fatigue','soreness','sleep'].forEach(f => {
       const inp = tr.querySelector(`[data-field="${f}"]`);
       if (d[f]) colorInput(inp, d[f]);
     });
   });
 
-  // Events
   tbody.querySelectorAll('.score-input').forEach(inp => {
     inp.addEventListener('input', function() {
       let v = parseInt(this.value);
@@ -525,6 +549,15 @@ function buildTable() {
   tbody.querySelectorAll('.comment-input').forEach(inp => {
     inp.addEventListener('input', function() {
       data[this.dataset.player][this.dataset.field] = this.value;
+    });
+  });
+
+  tbody.querySelectorAll('.tick-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const p = this.dataset.player;
+      data[p].tick = !data[p].tick;
+      this.classList.toggle('ticked', data[p].tick);
+      this.textContent = data[p].tick ? '✓' : '';
     });
   });
 }
@@ -556,10 +589,10 @@ function updateStats() {
 }
 
 function exportCSV() {
-  const rows = [['Date','Player','Fatigue','Soreness','Sleep','Comment']];
+  const rows = [['Date','Player','Present','Fatigue','Soreness','Sleep','Comment']];
   PLAYERS.forEach(p => {
     const d2 = data[p];
-    rows.push([currentDate, p, d2.fatigue, d2.soreness, d2.sleep, `"${(d2.comment||'').replace(/"/g,'""')}"`]);
+    rows.push([currentDate, p, d2.tick ? 'YES' : '', d2.fatigue, d2.soreness, d2.sleep, `"${(d2.comment||'').replace(/"/g,'""')}"`]);
   });
   const csv = rows.map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
@@ -637,7 +670,7 @@ function showResetModal() { document.getElementById('resetModal').classList.add(
 function hideResetModal() { document.getElementById('resetModal').classList.remove('active'); }
 
 function confirmReset() {
-  PLAYERS.forEach(p => { data[p] = { fatigue:'', soreness:'', sleep:'', comment:'' }; });
+  PLAYERS.forEach(p => { data[p] = { tick: false, fatigue:'', soreness:'', sleep:'', comment:'' }; });
   buildTable();
   updateStats();
   hideResetModal();
